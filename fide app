@@ -1,0 +1,417 @@
+import SwiftUI
+import Foundation
+import Charts
+
+// Destination - Select iPhone and Select All Destinations
+
+// Search View
+// Format Ratings without Commas - DONE
+// Show Title Here
+
+// Saved View
+// Show Title Here
+// Convert Ratings to Integers - DONE
+// Sort Saved by FIDE Standard Rating - DONE
+// Save Saved List when exiting App - DONE
+// Add Icon to Sort High to Low, Low to High - DONE
+// Add Ability to Delete Item on Slide Push - DONE
+
+// Add Icon to Compare / Graph Adjusted by Birth Year
+// Add Ability to Set Item as Profile on Slide Push
+
+// How to bring in all historic data
+// Peer Rating Graph
+
+
+// STRUCT Player
+struct Player: Identifiable, Codable {
+    var id = UUID()
+    let fideID: String
+    let name: String
+    let federation: String
+    let gender: String
+    let title: String
+    let rating_standard: Int
+    let rating_rapid: Int
+    let rating_blitz: Int
+    let country: String
+    let birthyear: Int
+
+    init(fideID: String, name: String, federation: String, gender: String, title: String, rating_standard: Int, rating_rapid: Int, rating_blitz: Int, country: String, birthyear: Int) {
+        self.fideID = fideID
+        self.name = name
+        self.federation = federation
+        self.gender = gender
+        self.title = title
+        self.rating_standard = rating_standard
+        self.rating_rapid = rating_rapid
+        self.rating_blitz = rating_blitz
+        self.country = country
+        self.birthyear = birthyear
+    }
+    
+    private enum CodingKeys: String, CodingKey {
+        case fideID, name, federation, gender, title, rating_standard, rating_rapid, rating_blitz, country, birthyear
+    }
+    // Custom Decoder to handle UUID separately
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        fideID = try container.decode(String.self, forKey: .fideID)
+        name = try container.decode(String.self, forKey: .name)
+        federation = try container.decode(String.self, forKey: .federation)
+        gender = try container.decode(String.self, forKey: .gender)
+        title = try container.decode(String.self, forKey: .title)
+        rating_standard = try container.decode(Int.self, forKey: .rating_standard)
+        rating_rapid = try container.decode(Int.self, forKey: .rating_rapid)
+        rating_blitz = try container.decode(Int.self, forKey: .rating_blitz)
+        country = try container.decode(String.self, forKey: .country)
+        birthyear = try container.decode(Int.self, forKey: .birthyear)
+    }
+}
+
+// STRUCT RatingsChartView
+struct RatingsChartView: View {
+    let players: [Player]
+    var body: some View {
+        VStack {
+            Text("Saved Players Ratings")
+                .font(.title)
+                .padding()
+            
+            Chart {
+                ForEach (players, id: \.id) {player in
+                    LineMark(
+                        x: .value("Player", player.name),
+                        y: .value("Rating", player.rating_standard)
+                    )
+                    .foregroundStyle(.blue)
+                    PointMark(
+                        x: .value("Player", player.name),
+                        y: .value("Rating", player.rating_standard)
+                    )
+                    .foregroundStyle(.blue)
+                }
+            }
+            .chartYScale(domain: [1400, 3000])
+            .chartYAxis{AxisMarks(values: [1400, 1800, 2200, 2600, 3000])}
+            .frame(height: 300)
+            .padding()
+            
+            Spacer()
+        }
+    }
+}
+struct DataPoint: Identifiable {
+    let id = UUID()
+    let date: Date
+    let rating: Int
+
+    init(dateString: String, rating: Int) {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM"
+        self.date = formatter.date(from: dateString) ?? Date()
+        self.rating = rating
+    }
+}
+
+
+
+// STRUCT SinglePlayerView
+struct SinglePlayerView: View {
+    let player: Player
+    var data: [DataPoint] = []
+    let dateFormatter = DateFormatter()
+    
+    var body: some View {
+
+        VStack(alignment: .leading, spacing: 10) {
+            Text(player.name)
+                .font(.largeTitle)
+                .bold()
+            
+            Text("Title: \(player.title.isEmpty ? "None" : player.title)")
+            Text("Federation: \(player.federation)")
+            Text("Birth Year: \(player.birthyear)")
+            Text("Gender: \(player.gender)")
+            
+            Divider()
+            
+            Text("Ratings")
+                .font(.headline)
+            Text("Standard: \(player.rating_standard)")
+            Text("Rapid: \(player.rating_rapid)")
+            Text("Blitz: \(player.rating_blitz)")
+            
+            Spacer()
+                
+            
+
+        }
+        .padding()
+        .navigationTitle("Player Details")
+    }
+}
+
+class PlayerViewModel: ObservableObject {
+    @Published var players: [Player] = []
+    @Published var searchResults: [Player] = []
+    
+    func fetchData() {
+        guard let fileURL = Bundle.main.url(forResource: "fide 2", withExtension: "txt") else {
+            print("Failed to locate fide.txt in bundle.")
+            return
+        }
+        
+        do {
+            let data = try Data(contentsOf: fileURL)
+            parseFixedWidth(data: data)
+        } catch {
+            print("Failed to load fide.txt: \(error.localizedDescription)")
+        }
+    }
+    
+    func parseFixedWidth(data: Data) {
+        if let fileContent = String(data: data, encoding: .utf8) {
+            let rows = fileContent.components(separatedBy: "\n")
+            var parsedPlayers: [Player] = []
+            
+            for row in rows.dropFirst() {
+                guard row.count >= 48 else { continue } // Ensure row has enough characters
+                let fideID = String(row[row.startIndex..<row.index(row.startIndex, offsetBy: 15)].trimmingCharacters(in: .whitespaces))
+                let name = String(row[row.index(row.startIndex, offsetBy: 15)..<row.index(row.startIndex, offsetBy: 75)]).trimmingCharacters(in: .whitespaces)
+                let federation = String(row[row.index(row.startIndex, offsetBy: 75)..<row.index(row.startIndex, offsetBy: 79)]).trimmingCharacters(in: .whitespaces)
+                let gender = String(row[row.index(row.startIndex, offsetBy: 79)..<row.index(row.startIndex, offsetBy: 81)]).trimmingCharacters(in: .whitespaces)
+                let title = String(row[row.index(row.startIndex, offsetBy: 83)..<row.index(row.startIndex, offsetBy: 86)]).trimmingCharacters(in: .whitespaces)
+                let rating_standard = Int(row[row.index(row.startIndex, offsetBy: 113)..<row.index(row.startIndex, offsetBy: 118)].trimmingCharacters(in: .whitespaces)) ?? 0
+                let birthyear = Int(row[row.index(row.startIndex, offsetBy: 126)..<row.index(row.startIndex, offsetBy: 130)].trimmingCharacters(in: .whitespaces)) ?? 0
+                
+                let rating_rapid = Int(row[row.index(row.startIndex, offsetBy: 35)..<row.index(row.startIndex, offsetBy: 40)].trimmingCharacters(in: .whitespaces)) ?? 0
+                let rating_blitz = Int(row[row.index(row.startIndex, offsetBy: 40)..<row.index(row.startIndex, offsetBy: 45)].trimmingCharacters(in: .whitespaces)) ?? 0
+                let country = String(row[row.index(row.startIndex, offsetBy: 45)..<row.index(row.startIndex, offsetBy: 48)]).trimmingCharacters(in: .whitespaces)
+
+                
+                let player = Player(fideID: fideID, name: name, federation: federation, gender: gender, title: title, rating_standard: rating_standard, rating_rapid: rating_rapid, rating_blitz: rating_blitz, country: country, birthyear: birthyear)
+                parsedPlayers.append(player)
+            }
+            
+            DispatchQueue.main.async {
+                self.players = parsedPlayers
+                self.searchResults = parsedPlayers // Show all players initially
+            }
+        }
+    }
+    
+    func searchPlayers(query: String) {
+        if query.isEmpty {
+            searchResults = players
+        } else {
+            searchResults = players.filter { player in
+                player.name.localizedCaseInsensitiveContains(query) ||
+                player.federation.localizedCaseInsensitiveContains(query) ||
+                "\(player.rating_standard)".contains(query) ||
+                "\(player.rating_rapid)".contains(query) ||
+                "\(player.rating_blitz)".contains(query)
+            }
+        }
+    }
+}
+
+// Defines Class SavedPlayersViewModel
+// Functions
+//   addPlayer
+//   removePlayer
+//   sortnumerically
+//   sortAlphabetically
+
+class SavedPlayersViewModel: ObservableObject {
+    @Published var isSortedDescending: Bool = true
+    private var isAlphabeticalAscending = true
+    
+    @Published var savedPlayers: [Player] = [] {
+        didSet {
+            saveToUserDefaults()
+        }
+    }
+    
+    private let savedPlayersKey = "savedPlayers"
+
+    init() {
+        loadFromUserDefaults()
+    }
+
+    func addPlayer(_ player: Player) {
+        if !savedPlayers.contains(where: { $0.fideID == player.fideID }) {
+            savedPlayers.append(player)
+        }
+    }
+
+    func removePlayer(_ player: Player) {
+        savedPlayers.removeAll { $0.fideID == player.fideID }
+    }
+
+    private func saveToUserDefaults() {
+        if let encoded = try? JSONEncoder().encode(savedPlayers) {
+            UserDefaults.standard.set(encoded, forKey: savedPlayersKey)
+        }
+    }
+    func toggleSortOrder() {
+        isSortedDescending.toggle()
+        savedPlayers.sort { isSortedDescending ? $0.rating_standard > $1.rating_standard : $0.rating_standard < $1.rating_standard }
+    }
+    func toggleAlphabeticalSort() {
+        isAlphabeticalAscending.toggle()
+        savedPlayers.sort { isAlphabeticalAscending ? $0.name < $1.name : $0.name > $1.name }
+    }
+    
+    private func loadFromUserDefaults() {
+        if let data = UserDefaults.standard.data(forKey: savedPlayersKey),
+           let decoded = try? JSONDecoder().decode([Player].self, from: data) {
+            savedPlayers = decoded
+        }
+    }
+}
+
+
+// SearchView
+
+struct SearchView: View {
+    @StateObject var viewModel = PlayerViewModel()
+    @EnvironmentObject var savedPlayersViewModel: SavedPlayersViewModel
+    @State private var searchText = ""
+    
+    var body: some View {
+        NavigationView {
+            VStack {
+                TextField("Search players", text: $searchText, onEditingChanged: { _ in
+                    viewModel.searchPlayers(query: searchText)
+                })
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .padding()
+                
+                List(viewModel.searchResults.indices, id: \ .self) { index in
+                    let player = viewModel.searchResults[index]
+                    VStack(alignment: .leading) {
+                        Text(player.name).font(.headline)
+                        Text("\(String(player.title))").font(.headline)
+//                      Text("FIDE ID: \(player.fideID)")
+//                        Text("Birth Year: \(player.birthyear > 0 ? "\(player.birthyear)" : "NA") \(String(player.gender))")
+//                        Text("Federation: \(player.federation)")
+                        Text("\(player.birthyear > 0 ? "\(player.birthyear)" : "NA") \(String(player.federation))").font(.system(size: 14))
+                        Text("Rating: \(String(player.rating_standard)) \(String(player.rating_rapid))").font(.system(size: 14))
+                    }
+//                    .padding()
+                    .background(index.isMultiple(of: 2) ? Color.gray.opacity(0.2) : Color.clear)
+                    .onTapGesture {
+                        savedPlayersViewModel.addPlayer(player)
+                        let _ = print("FIDE ID", player.fideID)
+                        let _ = print("Title", player.title)
+                        let _ = print("Gender", player.gender)
+                    }
+                }
+                .navigationTitle("Player Search View")
+                .frame(minWidth: 300, idealWidth: 400) // Adjust sidebar width here
+                .onAppear {
+                    viewModel.fetchData()
+                }
+            }
+        }
+    }
+}
+
+
+struct SavedView: View {
+    @EnvironmentObject var savedPlayersViewModel: SavedPlayersViewModel
+    @State private var showChart = false
+    
+    var body: some View {
+        NavigationView {
+            VStack {
+                HStack {
+                    Spacer()
+                    Button(action: savedPlayersViewModel.toggleAlphabeticalSort) {
+                        Image(systemName: "textformat.abc").font(.title2)
+                    }
+                    .padding()
+                    Button(action: savedPlayersViewModel.toggleSortOrder) {
+                        Image(systemName: savedPlayersViewModel.isSortedDescending ? "arrow.up" : "arrow.down").font(.title2)
+                    }
+                    .padding()
+                    Button(action: { showChart.toggle() }) {
+                        Image(systemName: "chart.line.uptrend.xyaxis").font(.title2)
+                    }
+                    .padding()
+                }
+ 
+                    List {
+                        ForEach(savedPlayersViewModel.savedPlayers) { player in
+                            NavigationLink(destination: SinglePlayerView(player: player)) {
+                                VStack {
+                                    HStack {
+                                        Text(player.name).font(.headline)
+                                        Circle()
+                                            .frame(width: 10, height: 10)
+                                            .foregroundColor(player.gender == "M" ? .blue : .pink)
+                                    }
+                                    
+                                    Text(player.title.isEmpty ? "" : player.title).font(.subheadline).foregroundColor(.gray)
+                                    Text("\(String(player.birthyear)) \(player.federation) \(player.fideID)").font(.system(size: 12))
+                                    Text("\(String(player.rating_standard)) \(player.rating_rapid) \(player.rating_blitz)").font(.system(size: 14))
+                                    }
+                                }
+                            }
+                        .onDelete { indexSet in
+                            indexSet.forEach { index in
+                                let player = savedPlayersViewModel.savedPlayers[index]
+                                savedPlayersViewModel.removePlayer(player)
+                            }
+                        }
+                    }
+                    .listStyle(PlainListStyle())
+            }
+            .navigationTitle("Peer Ratings")
+
+            .sheet(isPresented: $showChart) {
+                RatingsChartView(players: savedPlayersViewModel.savedPlayers)
+            }
+
+        }
+    }
+}
+
+// ContentView
+// Tabbed App
+struct ContentView: View {
+    var body: some View {
+        TabView {
+            SearchView()
+                .tabItem {
+                    Label("Search", systemImage: "magnifyingglass")
+                }
+            SavedView() // Now correctly references the SavedView
+                .tabItem {
+                    Label("Saved", systemImage: "star.fill")
+                }
+            Text("Profile") // Placeholder for future profile settings
+                .tabItem {
+                    Label("Profile", systemImage: "person.circle")
+                }
+            Text("Settings") // Placeholder for future profile settings
+                .tabItem {
+                    Label("Settings", systemImage: "gear")
+                }
+
+        }
+    }
+}
+
+@main
+struct FideRatingsApp: App {
+    @StateObject var savedPlayersViewModel = SavedPlayersViewModel()
+    
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+                .environmentObject(savedPlayersViewModel)
+        }
+    }
+}
