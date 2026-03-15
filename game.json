@@ -1,0 +1,100 @@
+{
+    "id": "4gW35dPQ",
+    "rated": true,
+    "variant": "standard",
+    "speed": "bullet",
+    "perf": "bullet",
+    "createdAt": 1773524980039,
+    "lastMoveAt": 1773525259135,
+    "status": "outoftime",
+    "source": "pool",
+    "players": {
+        "white": {
+            "user": {
+                "name": "AshBelur",
+                "id": "ashbelur"
+            },
+            "rating": 889,
+            "ratingDiff": -5
+        },
+        "black": {
+            "user": {
+                "name": "Kohlenmunkpeter",
+                "id": "kohlenmunkpeter"
+            },
+            "rating": 888,
+            "ratingDiff": 6
+        }
+    },
+    "winner": "black",
+    "opening": {
+        "eco": "B08",
+        "name": "Pirc Defense: Classical Variation, Quiet System, Czech Defense",
+        "ply": 12
+    },
+    "moves": "e4 d6 Nf3 Nf6 Nc3 g6 Be2 Bg7 O-O O-O d4 c6 e5 dxe5 dxe5 Ng4 Qxd8 Rxd8 Bg5 Nxe5 Nxe5 Bxe5 Bxe7 Re8 Bg5 h6 Bxh6 Nd7 Rfd1 b5 Rd3 Nf6 Re1 Ng4 Bxg4 Bxg4 Rde3 f6 f4 Kh7 fxe5 Kxh6 exf6 Rf8 Rf1 a5 Re5 Rad8 Ne4 Rd4 Nc3 Rd2",
+    "clocks": [
+        12003,
+        12003,
+        12003,
+        12035,
+        11907,
+        12027,
+        11587,
+        12011,
+        11547,
+        12035,
+        11251,
+        11939,
+        11059,
+        11555,
+        11075,
+        11555,
+        10211,
+        11491,
+        9627,
+        10323,
+        9059,
+        10251,
+        9099,
+        10227,
+        8419,
+        9795,
+        7779,
+        8723,
+        7451,
+        8523,
+        6035,
+        6939,
+        1875,
+        6803,
+        1715,
+        6739,
+        1307,
+        4171,
+        1227,
+        3299,
+        1115,
+        3147,
+        922,
+        2843,
+        621,
+        2187,
+        473,
+        2147,
+        254,
+        1987,
+        128,
+        1836,
+        0
+    ],
+    "clock": {
+        "initial": 120,
+        "increment": 1,
+        "totalTime": 160
+    },
+    "division": {
+        "middle": 19,
+        "end": 42
+    }
+}
